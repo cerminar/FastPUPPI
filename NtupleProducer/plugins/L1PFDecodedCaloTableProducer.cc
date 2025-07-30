@@ -115,11 +115,6 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
             vals_PuIdProb[i] = digi->floatPuProb();
             vals_EmIdProb[i] = digi->floatEmProb();
 
-            const l1tp2::CaloCrystalCluster *crycl = dynamic_cast<const l1tp2::CaloCrystalCluster *>(cand->constituentsAndFractions().front().first.get());
-            if(crycl) {
-                vals_caloIso[i] = crycl->isolation();
-                vals_showerShape[i] = crycl->e2x5() / crycl->e5x5();
-            }
         } else if(auto digi = std::get_if<l1ct::HadCaloObj>(&obj)){
             vals_empt[i] = digi->floatEmPt();
 
@@ -132,37 +127,45 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
             vals_PuIdProb[i] = digi->floatPuProb();
             vals_EmIdProb[i] = digi->floatEmProb();
 
-            const l1t::HGCalMulticluster *hgcalcl = dynamic_cast<const l1t::HGCalMulticluster *>(cand->constituentsAndFractions().front().first.get());
-            if(hgcalcl) {
-                static constexpr float ETAPHI_LSB = M_PI / 720;
-                static constexpr float SIGMAZZ_LSB = 778.098 / (1 << 7);
-                static constexpr float SIGMAPHIPHI_LSB = 0.12822 / (1 << 7);
-                static constexpr float SIGMAETAETA_LSB = 0.148922 / (1 << 5);
+        }
 
-                ap_uint<6> w_showerlenght = hgcalcl->showerLength();
-                ap_uint<6> w_coreshowerlenght = hgcalcl->coreShowerLength();
-                ap_uint<8> w_emf = std::min(round(hgcalcl->eot() * 256), float(255.));
-                ap_uint<10> w_abseta = round(fabs(hgcalcl->eta()) / ETAPHI_LSB);
-                ap_ufixed<12, 11, AP_RND_CONV, AP_SAT> w_meanz_f = fabs(hgcalcl->zBarycenter()) - 320;  // LSB = 0.5cm
-                ap_uint<12> w_meanz = w_meanz_f.range();
-                ap_uint<5> w_sigmaetaeta = round(hgcalcl->sigmaEtaEtaTot() / SIGMAETAETA_LSB);
-                ap_uint<7> w_sigmaphiphi = round(hgcalcl->sigmaPhiPhiTot() / SIGMAPHIPHI_LSB);
-                ap_uint<7> w_sigmazz = round(hgcalcl->sigmaZZ() / SIGMAZZ_LSB);
+        // Now fill variables which are not yet decoded by Correlator and need the upstream collection
+        const l1tp2::CaloCrystalCluster *crycl = dynamic_cast<const l1tp2::CaloCrystalCluster *>(cand->constituentsAndFractions().front().first.get());
+        if(crycl) {
+            vals_caloIso[i] = crycl->isolation();
+            vals_showerShape[i] = crycl->e2x5() / crycl->e5x5();
+        }
 
-                vals_showerlength[i] = w_showerlenght.to_int();
-                vals_coreshowerlength[i] = w_coreshowerlenght.to_int();
-                vals_emf[i] = w_emf / 256.;
-                vals_hw_emf[i] = w_emf.to_float();
-                vals_abseta[i] = w_abseta * ETAPHI_LSB;
-                vals_hw_abseta[i] = w_abseta.to_float();
-                vals_hw_meanz[i] = w_meanz*0.5;
-                vals_sigmaetaeta[i] = w_sigmaetaeta * SIGMAETAETA_LSB;
-                vals_hw_sigmaetaeta[i] = w_sigmaetaeta.to_float();
-                vals_sigmaphiphi[i] = w_sigmaphiphi * SIGMAPHIPHI_LSB;
-                vals_hw_sigmaphiphi[i] = w_sigmaphiphi.to_float();
-                vals_sigmazz[i] = w_sigmazz * SIGMAZZ_LSB;
-                vals_hw_sigmazz[i] = w_sigmazz.to_float();
-            }
+        const l1t::HGCalMulticluster *hgcalcl = dynamic_cast<const l1t::HGCalMulticluster *>(cand->constituentsAndFractions().front().first.get());
+        if(hgcalcl) {
+            static constexpr float ETAPHI_LSB = M_PI / 720;
+            static constexpr float SIGMAZZ_LSB = 778.098 / (1 << 7);
+            static constexpr float SIGMAPHIPHI_LSB = 0.12822 / (1 << 7);
+            static constexpr float SIGMAETAETA_LSB = 0.148922 / (1 << 5);
+
+            ap_uint<6> w_showerlenght = hgcalcl->showerLength();
+            ap_uint<6> w_coreshowerlenght = hgcalcl->coreShowerLength();
+            ap_uint<8> w_emf = std::min(round(hgcalcl->eot() * 256), float(255.));
+            ap_uint<10> w_abseta = round(fabs(hgcalcl->eta()) / ETAPHI_LSB);
+            ap_ufixed<12, 11, AP_RND_CONV, AP_SAT> w_meanz_f = fabs(hgcalcl->zBarycenter()) - 320;  // LSB = 0.5cm
+            ap_uint<12> w_meanz = w_meanz_f.range();
+            ap_uint<5> w_sigmaetaeta = round(hgcalcl->sigmaEtaEtaTot() / SIGMAETAETA_LSB);
+            ap_uint<7> w_sigmaphiphi = round(hgcalcl->sigmaPhiPhiTot() / SIGMAPHIPHI_LSB);
+            ap_uint<7> w_sigmazz = round(hgcalcl->sigmaZZ() / SIGMAZZ_LSB);
+
+            vals_showerlength[i] = w_showerlenght.to_int();
+            vals_coreshowerlength[i] = w_coreshowerlenght.to_int();
+            vals_emf[i] = w_emf / 256.;
+            vals_hw_emf[i] = w_emf.to_float();
+            vals_abseta[i] = w_abseta * ETAPHI_LSB;
+            vals_hw_abseta[i] = w_abseta.to_float();
+            vals_hw_meanz[i] = w_meanz*0.5;
+            vals_sigmaetaeta[i] = w_sigmaetaeta * SIGMAETAETA_LSB;
+            vals_hw_sigmaetaeta[i] = w_sigmaetaeta.to_float();
+            vals_sigmaphiphi[i] = w_sigmaphiphi * SIGMAPHIPHI_LSB;
+            vals_hw_sigmaphiphi[i] = w_sigmaphiphi.to_float();
+            vals_sigmazz[i] = w_sigmazz * SIGMAZZ_LSB;
+            vals_hw_sigmazz[i] = w_sigmazz.to_float();
         }
     }
 
